@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (AiogramTeleDiary)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (AiogramTeleDiary)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="AiogramTeleDiary Interperter (Py 3.12)" project-jdk-type="Python SDK" />
 </project>

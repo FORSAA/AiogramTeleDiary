@@ -1,4 +1,4 @@
-from Core.Modules.Imports.Libs.HandlersLibs import *
+from Core.Modules.Libs.HandlersLibs import *
 
 any_message_router = Router()
 

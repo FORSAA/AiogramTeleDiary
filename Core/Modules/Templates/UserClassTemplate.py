@@ -1,4 +1,4 @@
-from Core.Modules.Imports.Classes.UserClass import *
+from Core.Modules.Classes.UserClass import *
 
 BlankUser = User(
     {

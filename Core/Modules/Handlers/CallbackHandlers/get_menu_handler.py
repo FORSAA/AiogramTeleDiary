@@ -1,4 +1,4 @@
-from Core.Modules.Imports.Libs.HandlersLibs import *
+from Core.Modules.Libs.HandlersLibs import *
 
 get_menu_router = Router()
 

@@ -1,14 +1,16 @@
-from Core.Modules.Imports.Libs.HandlersLibs import *
+from Core.Modules.Libs.HandlersLibs import *
 
 request_homework_router = Router()
 
 
-@request_homework_router.callback_query(lambda call: call.data == "get_homework")
+@request_homework_router.callback_query(
+    lambda call: call.data == "get_homework"
+)
 async def cbk_request_homework(call: CallbackQuery, state: FSMContext):
     from_user: int = call.from_user.id
 
     if (from_user not in states):
-        await TelebotFunctions.add_to_states(from_user)
+        await TelebotFunctions.add_to_states(from_user, call.message)
 
     if (not states[from_user].auth_state):
         BlankPage.message_text = (
@@ -23,7 +25,10 @@ async def cbk_request_homework(call: CallbackQuery, state: FSMContext):
     await state.set_state(HomeworkRequest.selecting_wish_type)
 
 
-@request_homework_router.callback_query(StateFilter(None), lambda call: 'wish' in call.data)
+@request_homework_router.callback_query(
+    StateFilter(HomeworkRequest.selecting_wish_type),
+    lambda call: 'wish' in call.data
+)
 async def cbk_wish_sent_handler(call: CallbackQuery, state: FSMContext):
     await call.answer('')
     await state.update_data(wish=call.data.split('_')[1])
@@ -31,7 +36,10 @@ async def cbk_wish_sent_handler(call: CallbackQuery, state: FSMContext):
     await state.set_state(HomeworkRequest.selecting_day)
 
 
-@request_homework_router.callback_query(StateFilter(None), lambda call: 'wish' in call.data)
+@request_homework_router.callback_query(
+    StateFilter(HomeworkRequest.selecting_day),
+    lambda call: 'day' in call.data
+)
 async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
     await call.answer('')
     await state.update_data(day=call.data[0])

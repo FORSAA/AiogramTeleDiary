@@ -1,4 +1,4 @@
-from Core.Modules.Imports.Libs.HandlersLibs import *
+from Core.Modules.Libs.HandlersLibs import *
 
 auth_data_edit_router = Router()
 

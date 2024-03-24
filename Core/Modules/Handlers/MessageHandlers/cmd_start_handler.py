@@ -1,4 +1,4 @@
-from Core.Modules.Imports.Libs.HandlersLibs import *
+from Core.Modules.Libs.HandlersLibs import *
 
 cmd_start_router = Router()
 

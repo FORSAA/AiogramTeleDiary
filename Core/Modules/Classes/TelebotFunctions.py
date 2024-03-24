@@ -1,5 +1,4 @@
-from Core.Modules.Imports.Libs.FunctionsLibs import *
-
+from Core.Modules.Libs.FunctionsLibs import *
 SEPARATOR = ':'
 
 
@@ -36,11 +35,11 @@ class TelebotFunctions:
                                                              reply_markup=await TelebotFunctions.markup_generator(page))
 
     @staticmethod
-    async def add_to_states(user_id: int) -> User:
+    async def add_to_states(user_id: int, bot_last_message: Message = None) -> User:
         defaults = {
             'auth_state': 0,
             'menu_state': 'start',
-            'bot_last_message': None,
+            'bot_last_message': bot_last_message,
             'auth_data': None,
             'wish_type': None,
             'wish_day': None,

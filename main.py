@@ -1,5 +1,5 @@
-from Core.Modules.Imports.Libs.MainLibs import *
-from Core.Modules.Imports.Classes.UserClass import User
+from Core.Modules.Libs.MainLibs import *
+from Core.Modules.Classes.UserClass import User
 import os
 
 

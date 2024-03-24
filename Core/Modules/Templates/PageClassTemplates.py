@@ -1,4 +1,5 @@
-from Core.Modules.Imports.Classes.PageClass import *
+from Core.Modules.Classes.PageClass import Page
+from aiogram.utils.keyboard import InlineKeyboardButton
 
 StartPage = Page(
     name='start',
