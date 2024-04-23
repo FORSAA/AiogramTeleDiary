@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Filter, StateFilter, Command, CommandStart
 from Core.Modules.Classes.States.AuthEditClass import AuthEdit
 from Core.Modules.Classes.States.HomeworkRequest import HomeworkRequest
-from Core.Modules.Classes.TelebotFunctions import *
+from Core.Modules.Classes.BotProcessFunctions import *
 from Core.Modules.Templates.PageClassTemplates import *
 from main import states
 import asyncio
