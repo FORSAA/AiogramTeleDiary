@@ -1,3 +1,5 @@
+import os
+
 from Core.Modules.Libs.FunctionsLibs import *
 SEPARATOR = ':'
 
@@ -23,7 +25,10 @@ class TelebotFunctions:
                 local_user_last_message: Message = data
 
         if (del_last and local_bot_last_message):
-            await local_bot_last_message.delete()
+            try:
+                await local_bot_last_message.delete()
+            except BaseException:
+                pass
 
         if (del_user_last and local_user_last_message):
             await local_user_last_message.delete()
@@ -35,7 +40,41 @@ class TelebotFunctions:
                                                              reply_markup=await TelebotFunctions.markup_generator(page))
 
     @staticmethod
+    async def check_directory_existence(path: str) -> bool:
+        if (os.path.exists(path)):
+            return True
+        else:
+            return False
+
+    @staticmethod
+    async def create_directory(path: str) -> None:
+        os.makedirs(path)
+
+    @staticmethod
+    async def clear_directory(path: str):
+        files = os.listdir(path)
+
+        for file in files:
+            file_path = os.path.join(path, file)
+
+            if (os.path.isfile(file_path)):
+                os.remove(file_path)
+
+    @staticmethod
     async def add_to_states(user_id: int, bot_last_message: Message = None) -> User:
+        user_paths = (
+            "\\".join([os.getcwd(), "Core", "Temp_Files", "Docs", f"User_{user_id}"]),
+            "\\".join([os.getcwd(), "Core", "Temp_Files", "Screenshots", f"User_{user_id}"]),
+            "\\".join(["Temp_Files", "Docs", f"User_{user_id}"]),
+            "\\".join(["Temp_Files", "Screenshots", f"User_{user_id}"])
+        )
+
+        if not (await TelebotFunctions.check_directory_existence(user_paths[0])):
+            await TelebotFunctions.create_directory(user_paths[0])
+
+        if not (await TelebotFunctions.check_directory_existence(user_paths[1])):
+            await TelebotFunctions.create_directory(user_paths[1])
+
         defaults = {
             'auth_state': 0,
             'menu_state': 'start',
@@ -43,6 +82,10 @@ class TelebotFunctions:
             'auth_data': None,
             'wish_type': None,
             'wish_day': None,
+            'docs_path_absolute': user_paths[0],
+            'docs_path_relative': user_paths[2],
+            'screenshots_path_absolute': user_paths[1],
+            'screenshots_path_relative': user_paths[3]
         }
         states[user_id] = User(defaults)
         return states[user_id]

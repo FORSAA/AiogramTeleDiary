@@ -31,7 +31,7 @@ async def cbk_request_homework(call: CallbackQuery, state: FSMContext):
 )
 async def cbk_wish_sent_handler(call: CallbackQuery, state: FSMContext):
     await call.answer('')
-    await state.update_data(wish=call.data.split('_')[1])
+    await state.update_data(wish=call.data.split('_')[2])
     await TelebotFunctions.render(call, DaySelectPage)
     await state.set_state(HomeworkRequest.selecting_day)
 
@@ -48,11 +48,63 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
 
     request_params_data = await state.get_data()
-    request_wish_type = request_params_data['wish']
-    request_wish_day = request_params_data['day']
+    request_wish_type: str = request_params_data['wish']
+    request_wish_day: str = request_params_data['day']
+
+    request_data = {
+        'auth_data': states[user_id].auth_data,
+        'type': 'photo' if 'photo' in request_wish_type else 'text',
+        'day': request_wish_day[0],
+        'by_id': user_id
+    }
 
     await state.clear()
 
     # await TelebotFunctions.process_request(user_id, #request_wish_type, #request_wish_day) <- На будущее
+    result = await WebsiteInteraction.get_homework(request_data)
 
-    await TelebotFunctions.render(call, StartPage)
+    response_exceptions = result['exceptions']
+    response_text_data = result['data']['output_string']
+    response_additional_links_data = result['data']['additional_links']
+
+    if (response_exceptions):
+        if (response_exceptions == 'log_in_error'):
+            print('There is log_in_error.')
+            BlankPage.message_text = 'При попытке входа возникла ошибка.\n\nВозможно, вы ввели неверный логин/пароль. Проверьте правильность введенных данных и повторите попытку'
+            await TelebotFunctions.render(call, BlankPage)
+        elif (response_exceptions == 'get_homework_error'):
+            print('There is get_homework_error.')
+    else:
+        await bot.delete_message(user_id, states[user_id].bot_last_message.message_id)
+        if (response_text_data != 'screenshot'):
+            await bot.send_message(user_id, response_text_data)
+        else:
+            await bot.delete_message(user_id, states[user_id].bot_last_message.message_id)
+
+            await bot.send_photo(user_id,
+                                 FSInputFile(os.path.join(states[user_id].screenshots_path_absolute, 'Screenshot.png')))
+
+            if (response_additional_links_data):
+
+                await bot.send_message(user_id,
+                                       ' | '.join(response_additional_links_data)
+                                       )
+
+            await TelebotFunctions.clear_directory(states[user_id].screenshots_path_absolute)
+
+            print('Screenshot!')
+
+        if (result['data']['were_downloaded']):
+            docs_path = states[user_id].docs_path_absolute
+            files_list = os.listdir(docs_path)
+
+            media = []
+
+            for file_name in files_list:
+                file_path = os.path.join(docs_path, file_name)
+                media.append(InputMediaDocument(type='document', media=FSInputFile(file_path)))
+
+            await bot.send_media_group(user_id, media=media)
+            await TelebotFunctions.clear_directory(docs_path)
+
+    await TelebotFunctions.render(call, StartPage, del_last=False)
