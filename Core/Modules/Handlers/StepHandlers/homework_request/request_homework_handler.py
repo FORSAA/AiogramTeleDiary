@@ -58,6 +58,11 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
         'by_id': user_id
     }
 
+    if (request_data['type']=='photo'):
+        await call.message.bot.send_chat_action(user_id, ChatAction.UPLOAD_PHOTO)
+    else:
+        await call.message.bot.send_chat_action(user_id, ChatAction.TYPING)
+
     await state.clear()
 
     # await TelebotFunctions.process_request(user_id, #request_wish_type, #request_wish_day) <- На будущее
@@ -79,7 +84,6 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
         if (response_text_data != 'screenshot'):
             await bot.send_message(user_id, response_text_data)
         else:
-            await bot.delete_message(user_id, states[user_id].bot_last_message.message_id)
 
             await bot.send_photo(user_id,
                                  FSInputFile(os.path.join(states[user_id].screenshots_path_absolute, 'Screenshot.png')))
@@ -100,11 +104,12 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
 
             media = []
 
-            for file_name in files_list:
-                file_path = os.path.join(docs_path, file_name)
-                media.append(InputMediaDocument(type='document', media=FSInputFile(file_path)))
+            if (files_list):
+                for file_name in files_list:
+                    file_path = os.path.join(docs_path, file_name)
+                    media.append(InputMediaDocument(type='document', media=FSInputFile(file_path)))
 
-            await bot.send_media_group(user_id, media=media)
-            await TelebotFunctions.clear_directory(docs_path)
+                await bot.send_media_group(user_id, media=media)
+                await TelebotFunctions.clear_directory(docs_path)
 
     await TelebotFunctions.render(call, StartPage, del_last=False)

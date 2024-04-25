@@ -56,7 +56,7 @@ class WebsiteInteraction:
 
     @staticmethod
     async def get_homework(request_data: dict) -> dict[str, str]:
-        browser = await launch({'headless': False, 'args': ['--disable-infobars', '--disable-features=DownloadBubble']})
+        browser = await launch({'headless': True, 'args': ['--disable-infobars', '--disable-features=DownloadBubble', '--start-fullscreen']})  #
 
         auth_data = request_data['auth_data']
         req_type = request_data['type']
@@ -74,19 +74,15 @@ class WebsiteInteraction:
 
         page: Page = await browser.newPage()
 
-        await page.setViewport({'width': 2535, 'height': 1126})
+        await page.setViewport({'width': 2560, 'height': 2560})
         await page.goto('https://e-school.obr.lenreg.ru/authorize/')
 
         if (await WebsiteInteraction.log_in(auth_data, page)):
-            if (page.url.endswith('/main/')):
-                await asyncio.sleep(0.9)
-                await page.click('div.journal > div.readmore.center.ng-binding')
-
             try:
                 exercises_data = await WebsiteInteraction.get_exercises(req_day, req_by_id, req_type, page)
                 response['data'] = exercises_data
 
-            except pyppeteer.errors as Error:
+            except BaseException as Error:
                 response['exceptions'] += 'request_process_error'
                 await WebsiteInteraction.log_out(page)
                 return response
@@ -111,7 +107,7 @@ class WebsiteInteraction:
 
         await page.type('input.select2-search__field', 'МОБУ "СОШ "ЦО "Кудрово"')
 
-        await asyncio.sleep(0.7)
+        await asyncio.sleep(0.64)
         schools = await page.querySelectorAll('li.select2-results__option')
         await schools[1].click()
 
@@ -135,28 +131,33 @@ class WebsiteInteraction:
 
     @staticmethod
     async def get_exercises(weekday_num: int, user_id: int, request_type: str, page: Page) -> dict:
+        screenshot_path = "\\".join(
+            [os.getcwd(), "Core", "Temp_Files", "Screenshots", f"User_{user_id}", "Screenshot.png"])
+        docs_path = "\\".join(
+            [os.getcwd(), "Core", "Temp_Files", "Docs", f"User_{user_id}"])
+
         offset: int = await WebsiteInteraction.days_until_next_weekday(weekday_num)
         date: str = await WebsiteInteraction.get_date(offset)
+
         url_pattern: re.Pattern = re.compile(r'https?://\S+')
         were_downloaded: bool = False
         output_string: str = ''
         links: list = []
 
-        await page.waitForXPath(f'//span[contains(text(), "{date}")]')
-        date_element = (await page.xpath(f'//span[contains(text(), "{date}")]'))[0]
-        table = (await date_element.xpath(f'./../../..'))[0]
-        rows = await table.xpath('./tr[@class="ng-scope"]')
+        if (page.url.endswith('/main/')):
+            await page.click('div.journal > div.readmore.center.ng-binding')
 
-        buttons = await table.xpath('.//label[@title="показать/свернуть все содержимое таблицы"]')
-        for button in buttons:
+        await page.waitForXPath(f'//span[contains(text(), "{date}")]/../../..')
+        table = (await page.xpath(f'//span[contains(text(), "{date}")]/../../..'))[0]
+        paperclips = await table.xpath('.//assign-attachments')
+        rows = await table.xpath('./tr[@class="ng-scope"]')
+        expand_buttons = await table.xpath('.//label[@title="показать/свернуть все содержимое таблицы"][@style = "display: block;"]')
+
+        for expand_button in expand_buttons:
             try:
-                await button.click()
+                await expand_button.click()
             except pyppeteer.errors.ElementHandleError as Error:
                 pass
-
-        paperclips = await table.xpath('.//assign-attachments')
-
-        docs_path = "\\".join([os.getcwd(), "Core", "Temp_Files", "Docs", f"User_{user_id}"])
 
         await page._client.send('Page.setDownloadBehavior', {'behavior': 'allow', 'downloadPath': docs_path})
 
@@ -165,22 +166,8 @@ class WebsiteInteraction:
         if (match):
             links += match
 
-        for paperclip in paperclips:
-            try:
-                await asyncio.sleep(0.1)
-                await paperclip.click()
-                await page.waitForSelector('div.visible')
-                files_table: ElementHandle = await page.querySelector('div.visible')
-                files = await files_table.xpath('.//a')
-                for file in files:
-                    await file.click({'delay': 200})
-                    were_downloaded = True
-                await paperclip.click()
-            except pyppeteer.errors.ElementHandleError as Error:
-                await date_element.click()
-
-        joinable_list = []
         if (request_type == 'text'):
+            joinable_list = []
             for row in rows:
                 lesson_num: str = await WebsiteInteraction.get_element_text('td.num_subject', row)
                 lesson_name: str = await WebsiteInteraction.get_element_text('* > a.subject', row)
@@ -191,11 +178,25 @@ class WebsiteInteraction:
 
                 joinable_list.append(text)
 
-            output_string = f'\n\n{"="*50}\n\n'.join(joinable_list)
+            output_string = f'\n\n{"="*34}\n\n'.join(joinable_list)
         else:
-            screenshot_path = "\\".join([os.getcwd(), "Core", "Temp_Files", "Screenshots", f"User_{user_id}", "Screenshot.png"])
+            await asyncio.sleep(0.25)
             await table.screenshot({'path': screenshot_path})
             output_string = 'screenshot'
+
+        for paperclip in paperclips:
+            try:
+                await paperclip.click()
+                await page.waitForSelector('div.visible')
+                files_table = await page.querySelector('div.visible')
+                files = await files_table.xpath('.//a')
+                for file in files:
+                    await file.click({'delay': 175})
+                    were_downloaded = True
+                await paperclip.click()
+                await asyncio.sleep(0.25)
+            except pyppeteer.errors.ElementHandleError as Error:
+                pass
 
         return {
             'output_string': output_string,
@@ -205,14 +206,14 @@ class WebsiteInteraction:
 
     @staticmethod
     async def log_out(page: Page) -> bool:
+        await page.waitForSelector("li.no_separator")
         await page.click("li.no_separator")
         await page.waitForSelector('button.btn-primary')
         await asyncio.sleep(0.4)
         await page.click('button.btn-primary', {'clickCount': 4})
-        await page.waitForNavigation({'url': 'https://e-school.obr.lenreg.ru/logout'})
+        await page.waitForNavigation({'url': 'https://e-school.obr.lenreg.ru/logout'}),
 
         return True
-
 
 
 if __name__ == "__main__":

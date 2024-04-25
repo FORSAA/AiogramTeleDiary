@@ -9,6 +9,7 @@ from Core.Modules.Classes.BotProcessFunctions import *
 from Core.Modules.Templates.PageClassTemplates import *
 from Core.Modules.Classes.Pyppeteer.WebsiteInteraction import WebsiteInteraction
 from main import states
+from aiogram.enums import ChatAction
 from aiogram.utils.media_group import MediaGroupBuilder
 import asyncio
 
