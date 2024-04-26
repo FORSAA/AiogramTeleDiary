@@ -2,7 +2,7 @@ import pyppeteer.errors
 from pyppeteer.page import Page
 from pyppeteer.element_handle import ElementHandle
 from datetime import datetime, timedelta
-from main import states
+from main import states, bot
 from pyppeteer import launch
 from time import sleep
 import asyncio

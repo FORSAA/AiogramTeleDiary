@@ -83,8 +83,16 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
                 user_id,
                 'При попытке входа возникла ошибка.\n\nВозможно, вы ввели неверный логин/пароль. Проверьте правильность введенных данных и повторите попытку'
             )
-        elif (response_exceptions == 'get_homework_error'):
-            print('There is get_homework_error.')
+        elif ('get_homework_error' in response_exceptions):
+            await bot.delete_message(
+                user_id,
+                states[user_id].bot_last_message.message_id
+            )
+
+            await bot.send_message(
+                user_id,
+                'При попытке получения данных возникла ошибка.\n\nПовторите попытку.'
+            )
     else:
         await bot.delete_message(user_id, states[user_id].bot_last_message.message_id)
         if (response_text_data != 'screenshot'):
@@ -101,8 +109,6 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
                                        )
 
             await TelebotFunctions.clear_directory(states[user_id].screenshots_path_absolute)
-
-            print('Screenshot!')
 
         if (result['data']['were_downloaded']):
             docs_path = states[user_id].docs_path_absolute

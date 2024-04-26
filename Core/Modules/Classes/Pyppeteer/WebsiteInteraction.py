@@ -1,6 +1,11 @@
-import asyncio
+import asyncio, traceback
 
 from Core.Modules.Libs.WebsiteIntercationLibs import *
+
+BROWSER_ARGS: dict = {
+    'headless': True,
+    'args': ['--disable-infobars', '--disable-features=DownloadBubble', '--start-fullscreen']
+}
 
 test_auth_data = {
         'login': 'ЗахаровЕ9',
@@ -56,7 +61,7 @@ class WebsiteInteraction:
 
     @staticmethod
     async def get_homework(request_data: dict) -> dict[str, str]:
-        browser = await launch({'headless': False, 'args': ['--disable-infobars', '--disable-features=DownloadBubble', '--start-fullscreen']})  #
+        browser = await launch(BROWSER_ARGS)
 
         auth_data = request_data['auth_data']
         req_type = request_data['type']
@@ -81,14 +86,19 @@ class WebsiteInteraction:
 
         if (await WebsiteInteraction.log_in(auth_data, page)):
             print(f'Logined in | By: {req_by_id}')
+            bot_local_message = await bot.send_message(req_by_id, 'Подготовка полученных данных...')
             try:
                 exercises_data = await WebsiteInteraction.get_exercises(req_day, req_by_id, req_type, page)
                 response['data'] = exercises_data
+                await bot.delete_message(req_by_id, bot_local_message.message_id)
 
             except BaseException as Error:
-                print(f'Process_error | By: {req_by_id}')
+                print(f'Process_error | By: {req_by_id} | Error: {Error}')
+                traceback.print_exc()
+                await bot.delete_message(req_by_id, bot_local_message.message_id)
                 response['exceptions'] += 'get_homework_error'
                 await WebsiteInteraction.log_out(page)
+                await browser.close()
                 return response
 
             print(f'Loging out | By: {req_by_id}')
@@ -106,15 +116,14 @@ class WebsiteInteraction:
 
     @staticmethod
     async def log_in(auth_data: dict[str, str], page: Page) -> bool:
-        login = auth_data.get('login', '-')
-        password = auth_data.get('password', '-')
+        login = auth_data['login']
+        password = auth_data['password']
 
         await page.waitForSelector('span.selection')
         await page.click('span.selection')
-
         await page.type('input.select2-search__field', 'МОБУ "СОШ "ЦО "Кудрово"')
 
-        await asyncio.sleep(0.64)
+        await asyncio.sleep(0.68)
         schools = await page.querySelectorAll('li.select2-results__option')
         await schools[1].click()
 
@@ -124,7 +133,7 @@ class WebsiteInteraction:
         await page.click('div.primary-button')
 
         try:
-            await page.waitForNavigation({'url': 'https://e-school.obr.lenreg.ru/app/school/main/', 'timeout': 2000})
+            await page.waitForNavigation({'url': 'https://e-school.obr.lenreg.ru/app/school/main/', 'timeout': 2500})
         except pyppeteer.errors.TimeoutError as Error:
             return False
 
@@ -146,13 +155,19 @@ class WebsiteInteraction:
         offset: int = await WebsiteInteraction.days_until_next_weekday(weekday_num)
         date: str = await WebsiteInteraction.get_date(offset)
 
+        print(f'Date: {date} | By: {user_id}')
+
         url_pattern: re.Pattern = re.compile(r'https?://\S+')
         were_downloaded: bool = False
         output_string: str = ''
         links: list = []
 
         if (page.url.endswith('/main/')):
+            await asyncio.sleep(0.18)
             await page.click('div.journal > div.readmore.center.ng-binding')
+
+        if (page.url.endswith('studentdiary/')):
+            print(f'Got page, getting data | By: {user_id}')
 
         await page.waitForXPath(f'//span[contains(text(), "{date}")]/../../..')
         table = (await page.xpath(f'//span[contains(text(), "{date}")]/../../..'))[0]
@@ -160,7 +175,6 @@ class WebsiteInteraction:
         rows = await table.xpath('./tr[@class="ng-scope"]')
         expand_buttons = await table.xpath('.//label[@title="показать/свернуть все содержимое таблицы"][@style = "display: block;"]')
 
-        print(f'Got page, getting data | By: {user_id}')
 
         for expand_button in expand_buttons:
             try:
@@ -170,8 +184,8 @@ class WebsiteInteraction:
 
         await page._client.send('Page.setDownloadBehavior', {'behavior': 'allow', 'downloadPath': docs_path})
 
-        url_check_text: str = await (await table.getProperty('textContent')).jsonValue()
-        match = re.findall(url_pattern, url_check_text)
+        table_text: str = await (await table.getProperty('textContent')).jsonValue()
+        match = re.findall(url_pattern, table_text)
         if (match):
             links += match
 
@@ -190,7 +204,7 @@ class WebsiteInteraction:
             output_string = f'\n\n{"="*34}\n\n'.join(joinable_list)
             print(f'Got text data | By: {user_id}')
         else:
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.1)
             await table.screenshot({'path': screenshot_path})
             output_string = 'screenshot'
             print(f'Got screenshot | By: {user_id}')
@@ -205,9 +219,9 @@ class WebsiteInteraction:
                 for file in files:
                     await file.click()
                     were_downloaded = True
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.08)
                 await paperclip.click()
-                await asyncio.sleep(0.25)
+                await asyncio.sleep(0.18)
             except pyppeteer.errors.ElementHandleError as Error:
                 pass
 
