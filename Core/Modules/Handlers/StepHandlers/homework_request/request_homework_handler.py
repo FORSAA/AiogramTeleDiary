@@ -58,7 +58,7 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
         'by_id': user_id
     }
 
-    if (request_data['type']=='photo'):
+    if (request_data['type'] == 'photo'):
         await call.message.bot.send_chat_action(user_id, ChatAction.UPLOAD_PHOTO)
     else:
         await call.message.bot.send_chat_action(user_id, ChatAction.TYPING)
@@ -73,10 +73,16 @@ async def cbk_day_sent_handler(call: CallbackQuery, state: FSMContext):
     response_additional_links_data = result['data']['additional_links']
 
     if (response_exceptions):
-        if (response_exceptions == 'log_in_error'):
-            print('There is log_in_error.')
-            BlankPage.message_text = 'При попытке входа возникла ошибка.\n\nВозможно, вы ввели неверный логин/пароль. Проверьте правильность введенных данных и повторите попытку'
-            await TelebotFunctions.render(call, BlankPage)
+        if ('log_in_error' in response_exceptions):
+            await bot.delete_message(
+                user_id,
+                states[user_id].bot_last_message.message_id
+            )
+
+            await bot.send_message(
+                user_id,
+                'При попытке входа возникла ошибка.\n\nВозможно, вы ввели неверный логин/пароль. Проверьте правильность введенных данных и повторите попытку'
+            )
         elif (response_exceptions == 'get_homework_error'):
             print('There is get_homework_error.')
     else:

@@ -56,12 +56,14 @@ class WebsiteInteraction:
 
     @staticmethod
     async def get_homework(request_data: dict) -> dict[str, str]:
-        browser = await launch({'headless': True, 'args': ['--disable-infobars', '--disable-features=DownloadBubble', '--start-fullscreen']})  #
+        browser = await launch({'headless': False, 'args': ['--disable-infobars', '--disable-features=DownloadBubble', '--start-fullscreen']})  #
 
         auth_data = request_data['auth_data']
         req_type = request_data['type']
         req_day = int(request_data['day'])
         req_by_id = request_data['by_id']
+
+        print(f'Request | By: {req_by_id} | Type: {req_type} | Day: {req_day}')
 
         response = {
             'data': {
@@ -78,19 +80,24 @@ class WebsiteInteraction:
         await page.goto('https://e-school.obr.lenreg.ru/authorize/')
 
         if (await WebsiteInteraction.log_in(auth_data, page)):
+            print(f'Logined in | By: {req_by_id}')
             try:
                 exercises_data = await WebsiteInteraction.get_exercises(req_day, req_by_id, req_type, page)
                 response['data'] = exercises_data
 
             except BaseException as Error:
-                response['exceptions'] += 'request_process_error'
+                print(f'Process_error | By: {req_by_id}')
+                response['exceptions'] += 'get_homework_error'
                 await WebsiteInteraction.log_out(page)
                 return response
 
+            print(f'Loging out | By: {req_by_id}')
             await WebsiteInteraction.log_out(page)
 
         else:
+            print(f'Log in error | By: {req_by_id}')
             response['exceptions'] += ' log_in_error'
+            await browser.close()
             return response
 
         await browser.close()
@@ -153,6 +160,8 @@ class WebsiteInteraction:
         rows = await table.xpath('./tr[@class="ng-scope"]')
         expand_buttons = await table.xpath('.//label[@title="показать/свернуть все содержимое таблицы"][@style = "display: block;"]')
 
+        print(f'Got page, getting data | By: {user_id}')
+
         for expand_button in expand_buttons:
             try:
                 await expand_button.click()
@@ -179,11 +188,14 @@ class WebsiteInteraction:
                 joinable_list.append(text)
 
             output_string = f'\n\n{"="*34}\n\n'.join(joinable_list)
+            print(f'Got text data | By: {user_id}')
         else:
             await asyncio.sleep(0.25)
             await table.screenshot({'path': screenshot_path})
             output_string = 'screenshot'
+            print(f'Got screenshot | By: {user_id}')
 
+        print(f'Check paperclips | By: {user_id}')
         for paperclip in paperclips:
             try:
                 await paperclip.click()
@@ -191,8 +203,9 @@ class WebsiteInteraction:
                 files_table = await page.querySelector('div.visible')
                 files = await files_table.xpath('.//a')
                 for file in files:
-                    await file.click({'delay': 175})
+                    await file.click()
                     were_downloaded = True
+                    await asyncio.sleep(0.05)
                 await paperclip.click()
                 await asyncio.sleep(0.25)
             except pyppeteer.errors.ElementHandleError as Error:
