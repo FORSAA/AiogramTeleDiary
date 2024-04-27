@@ -7,7 +7,8 @@ import os
 FILES_DIR = '\\'.join([os.getcwd(), 'Core', 'Temp_Files'])
 
 states: dict[int, User] = {}
-bot = Bot(token=os.getenv('TOKEN'))
+TOKEN = os.getenv('TOKEN')
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
